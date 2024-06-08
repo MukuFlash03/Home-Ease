@@ -1,0 +1,11 @@
+streamlit==1.35.0
+together==1.2.0
+pymongo==4.7.3
+openai==1.33.0
+groq==0.8.0
+python-dotenv==1.0.1
+requests==2.32.3
+langchain==0.2.3
+langchain-mongodb==0.1.6
+langchain-openai==0.1.8
+langchain-community==0.2.4
