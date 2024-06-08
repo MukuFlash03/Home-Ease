@@ -28,7 +28,7 @@ def generate_response(prompt):
 def main():
     st.title("Home Ease: Your Personalized Housing Homie!")
 
-    user_input = st.text_input("Rental Query", "Please enter your rental query")
+    user_input = st.text_input("Rental Query", "Type here...")
 
     if user_input:
         response = generate_response(user_input)
