@@ -10,3 +10,4 @@ langchain-mongodb==0.1.6
 langchain-openai==0.1.8
 langchain-community==0.2.4
 langchain-groq==0.1.5
+langchain-together==0.1.3
