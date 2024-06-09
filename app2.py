@@ -6,6 +6,8 @@ import together
 import pymongo
 from typing import List
 from ragChain import invoke_rag_chain
+from datetime import datetime
+import re
 
 # Load environment variables from .env file
 load_dotenv()
@@ -92,6 +94,9 @@ def handle_query():
         if 'rag_documents' in st.session_state:
             del st.session_state.rag_documents
 
+def camel_case_split(key):
+    return re.sub(r'(?<!^)(?=[A-Z])', ' ', key).title()
+
 def main():
     st.sidebar.title("Navigation")
     app_mode = st.sidebar.selectbox("Choose the app mode", ["Chatbot", "Rental Listings Search"])
@@ -130,12 +135,23 @@ def main():
                     with col1:
                         for key, value in result.metadata.items():
                             if key in ['city', 'state', 'zipCode', 'propertyType', 'bedrooms', 'bathrooms', 'squareFootage']:
-                                st.write(f"**{key.capitalize()}:** {value}")
+                                formatted_key = camel_case_split(key)
+                                st.write(f"**{formatted_key}:** {value}")
 
                     with col2:
                         for key, value in result.metadata.items():
-                            if key in ['yearBuilt', 'status', 'price', 'listedDate', 'lastSeenDate', 'daysOnMarket']:
-                                st.write(f"**{key.capitalize()}:** {value}")
+                            if key in ['yearBuilt', 'status', 'price', 'daysOnMarket']:
+                                formatted_key = camel_case_split(key)
+                                st.write(f"**{formatted_key}:** {value}")
+                            elif key in ['listedDate', 'lastSeenDate']:
+                                try:
+                                    date_obj = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%fZ")
+                                    formatted_date = date_obj.strftime("%d %B %Y")
+                                    formatted_key = camel_case_split(key)
+                                    st.write(f"**{formatted_key}:** {formatted_date}")
+                                except ValueError:
+                                    formatted_key = camel_case_split(key)
+                                    st.write(f"**{formatted_key}:** {value}")
 
                     st.write("---")
 
