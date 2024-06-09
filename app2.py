@@ -43,19 +43,22 @@ def generate_response(prompt):
 
     return chat_completion.choices[0].message.content
 
-
 def generate_embeddings():
     listings = list(listings_collection.find())
 
     try:
         for listing in listings:
-            listing_text = f"ID: {listing['id']}\nAddress: {listing['formattedAddress']}\nAddress Line 1: {listing['addressLine1']}\nAddress Line 2: {listing['addressLine2']}\nCity: {listing['city']}\nState: {listing['state']}\nZip Code: {listing['zipCode']}\nCounty: {listing['county']}\nLatitude: {listing['latitude']}\nLongitude: {listing['longitude']}\nProperty Type: {listing['propertyType']}\nBedrooms: {listing['bedrooms']}\nBathrooms: {listing['bathrooms']}\nSquare Footage: {listing['squareFootage']}\nLot Size: {listing['lotSize']}\nYear Built: {listing['yearBuilt']}\nStatus: {listing['status']}\nPrice: {listing['price']}\nListed Date: {listing['listedDate']}\nRemoved Date: {listing['removedDate']}\nCreated Date: {listing['createdDate']}\nLast Seen Date: {listing['lastSeenDate']}\nDays on Market: {listing['daysOnMarket']}"
+            listing_text = ""
+            for key, value in listing.items():
+                if key != '_id' and key != 'embedding':  # Exclude '_id' and 'embedding' keys
+                    listing_text += f"{key}: {value}\n"
+
             embedding_outputs = together_client.embeddings.create(
                 input=listing_text,
                 model=MODEL,
             )
             listing['listing_text'] = listing_text
-            listing['embedding'] = embedding_outputs
+            listing['embedding'] = [x.embedding for x in embedding_outputs.data]
             listings_collection.replace_one({'_id': listing['_id']}, listing)
     except Exception as e:
         print(f"Exception: {e}")
@@ -67,6 +70,10 @@ def handle_query():
     if user_query:  # Check if there is a query
         answer, documents = invoke_rag_chain(user_query)
 
+        # Store the RAG chain results in the session state
+        st.session_state.rag_answer = answer
+        st.session_state.rag_documents = documents
+
         # Append both user query and bot response to the conversation
         # st.session_state.conversation.append(f"User: {user_query}")
         # st.session_state.conversation.append(f"Bot: {response}")
@@ -77,6 +84,13 @@ def handle_query():
 
         # Clear the input after processing
         st.session_state.user_query = ""
+
+    else:
+        # Clear the previous results if no query is entered
+        if 'rag_answer' in st.session_state:
+            del st.session_state.rag_answer
+        if 'rag_documents' in st.session_state:
+            del st.session_state.rag_documents
 
 def main():
     st.sidebar.title("Navigation")
@@ -93,35 +107,37 @@ def main():
         st.title("Rental Listings Search")
         if 'embedding' not in listings_collection.find_one():
             generate_embeddings()
+
+        st.session_state.user_query = st.text_input("Enter your search query:")
+        search_button = st.button("Search")
+
+        if search_button and st.session_state.user_query:
+            handle_query()
     
-        # query = st.text_input("Enter your search query:")
-        user_query = st.text_input("Enter your search query:", key="user_query", on_change=lambda: handle_query())
-        if user_query:
-            if 'rag_answer' in st.session_state and 'rag_documents' in st.session_state:
-                st.write("RAG Answer:")
-                st.write(st.session_state.rag_answer)
+        if 'rag_answer' in st.session_state and 'rag_documents' in st.session_state:
+            st.write("RAG Answer:")
+            st.write(st.session_state.rag_answer)
 
-                documents = st.session_state.rag_documents
+            documents = st.session_state.rag_documents
 
-                for result in documents:
-                    with st.container():
-                        st.write(f"### {result['formattedAddress']}")
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            st.write(f"**City:** {result['city']}")
-                            st.write(f"**State:** {result['state']}")
-                            st.write(f"**Zip Code:** {result['zipCode']}")
-                            st.write(f"**Property Type:** {result['propertyType']}")
-                            st.write(f"**Bedrooms:** {result['bedrooms']}")
-                            st.write(f"**Bathrooms:** {result['bathrooms']}")
-                            st.write(f"**Square Footage:** {result['squareFootage']}")
-                        with col2:
-                            st.write(f"**Year Built:** {result['yearBuilt']}")
-                            st.write(f"**Status:** {result['status']}")
-                            st.write(f"**Price:** {result['price']}")
-                            st.write(f"**Listed Date:** {result['listedDate']}")
-                            st.write(f"**Last Seen Date:** {result['lastSeenDate']}")
-                            st.write(f"**Days on Market:** {result['daysOnMarket']}")
-                        st.write("---")
+            for result in documents:
+                with st.container():
+                    if 'formattedAddress' in result.metadata:
+                        st.write(f"### {result.metadata['formattedAddress']}")
+
+                    col1, col2 = st.columns(2)
+
+                    with col1:
+                        for key, value in result.metadata.items():
+                            if key in ['city', 'state', 'zipCode', 'propertyType', 'bedrooms', 'bathrooms', 'squareFootage']:
+                                st.write(f"**{key.capitalize()}:** {value}")
+
+                    with col2:
+                        for key, value in result.metadata.items():
+                            if key in ['yearBuilt', 'status', 'price', 'listedDate', 'lastSeenDate', 'daysOnMarket']:
+                                st.write(f"**{key.capitalize()}:** {value}")
+
+                    st.write("---")
+
 if __name__ == "__main__":
     main()

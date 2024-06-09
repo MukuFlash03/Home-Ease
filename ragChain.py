@@ -56,13 +56,13 @@ def create_vector_store():
 
 def query_vector_store(vector_store, query):
     results = vector_store.similarity_search(query)
-    pprint.pprint(results)
+    # pprint.pprint(results)
 
 def build_rag_chain(vector_store):
     # Instantiate Atlas Vector Search as a retriever
     retriever = vector_store.as_retriever(
         search_type = "similarity",
-        search_kwargs = {"k": 10, "score_threshold": 0.75}
+        search_kwargs = {"k": 5}
     )
 
     # Define a prompt template
@@ -104,13 +104,23 @@ def query_rag_chain(rag_chain, retriever, question):
     # Return source documents
     # documents = retriever.get_relevant_documents(question)
     documents = retriever.invoke({"question": question})
-    print("\nSource documents:")
-    pprint.pprint(documents)
+    # print("\nSource documents:")
+    # pprint.pprint(documents)
     return answer, documents
 
 def invoke_rag_chain(query):
     vector_store = create_vector_store()
-    query_vector_store(vector_store, query) # Can skip, just querying
+    print("Vector store created.")
+    
+    query_vector_store(vector_store, query)
+    print("Vector store queried.")
+    
     rag_chain, retriever = build_rag_chain(vector_store)
+    print("RAG chain and retriever built.")
+    
+    print("User query:", query)
     answer, documents = query_rag_chain(rag_chain, retriever, query)
+    print("RAG chain queried.")
+    
+    print("Retrieved documents:", documents)
     return answer, documents
