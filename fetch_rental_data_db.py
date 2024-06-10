@@ -33,8 +33,13 @@ params_san_francisco = {
     "bathrooms": 1,
     "status": "Active",
 }
+
 listings = get_listings(params_san_francisco)
 for listing in listings:
     print(listing)
 
+def delete_documents():
+    listings_collection.update_many({}, {"$unset": {"embedding": ""}})
+
+delete_documents()
 

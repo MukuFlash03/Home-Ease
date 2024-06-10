@@ -60,7 +60,7 @@ def generate_embeddings():
                 model=MODEL,
             )
             listing['listing_text'] = listing_text
-            listing['embedding'] = [x.embedding for x in embedding_outputs.data]
+            listing['embedding'] = [x.embedding for x in embedding_outputs.data][0]
             listings_collection.replace_one({'_id': listing['_id']}, listing)
     except Exception as e:
         print(f"Exception: {e}")
